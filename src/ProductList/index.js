@@ -10,7 +10,7 @@ const TableHeader = () => (
       textStyle={{  fontSize: 16,
         fontWeight: 'bold',
         color: '#fff',
-        textAlign: 'center'}}
+        textAlign: 'center',}}
     />
   </View>
 );

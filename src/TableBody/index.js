@@ -17,7 +17,13 @@ const TableBody = ({ products, handleDecrement, handleIncrement, handleUnitPrice
           </TouchableOpacity>,
           `R$${(product.quantity * product.unitPrice).toFixed(2)}`,
         ]}
-        textStyle={styles.cell}
+        textStyle={{borderWidth:.5,
+          borderColor:'gray',
+          flex: 1,
+          fontSize: 14,
+          padding: 5,
+          color: '#333',
+          textAlign: 'center',}}
       />
     ))}
   </View>
