@@ -7,7 +7,10 @@ const TableHeader = () => (
   <View style={styles.tableHeader}>
     <Row
       data={['Nome', 'Quantidade', 'Preço Unitário', 'Preço Total']}
-      textStyle={styles.headerText}
+      textStyle={{  fontSize: 16,
+        fontWeight: 'bold',
+        color: '#fff',
+        textAlign: 'center'}}
     />
   </View>
 );
