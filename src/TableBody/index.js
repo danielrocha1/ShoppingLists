@@ -15,7 +15,7 @@ const TableBody = ({ products, handleDecrement, handleIncrement, handleUnitPrice
           <TouchableOpacity onPress={() => handleUnitPriceClick(product.id, product.unitPrice)} style={styles.button}>
             <Text style={styles.buttonText}>R${product.unitPrice}</Text>
           </TouchableOpacity>,
-          `R$${product.quantity * product.unitPrice}`,
+          `R$${(product.quantity * product.unitPrice).toFixed(2)}`,
         ]}
         textStyle={styles.cell}
       />
