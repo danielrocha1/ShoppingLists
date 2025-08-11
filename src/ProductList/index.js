@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Table, Row } from 'react-native-table-component';
 import * as Animatable from 'react-native-animatable';
+import { colors } from '../theme';
 
 const TableHeader = () => (
   <View style={styles.tableHeader}>
@@ -167,66 +168,66 @@ const ProductList = ({ products, setProducts }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: '#fff', borderRadius: 8, overflowY : 'hidden' },
-  tableHeader: { backgroundColor: '#007AFF', paddingVertical: 10 },
-  headerText: { fontSize: 16, fontWeight: 'bold', color: '#fff', textAlign: 'center' },
-  tableBody: { paddingVertical: 5 },
+  container: { backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden' },
+  tableHeader: { backgroundColor: colors.primary, paddingVertical: 12 },
+  headerText: { fontSize: 14, fontWeight: '700', color: '#fff', textAlign: 'center', letterSpacing: 0.3 },
+  tableBody: { paddingVertical: 6 },
   productRow: {
     backgroundColor: '#fff',
-    borderRadius: 10,
-    marginVertical: 5,
-    marginHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: 14,
+    marginVertical: 6,
+    marginHorizontal: 10,
+    paddingVertical: 6,
     elevation: 3,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 }
   },
-  cell: { fontSize: 14, textAlign: 'center', color: '#333' },
+  cell: { fontSize: 14, textAlign: 'center', color: '#374151' },
   quantityContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   buttonIncrement: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 20,
+    backgroundColor: '#34C759',
+    borderRadius: 18,
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginHorizontal: 5
   },
   buttonDecrement: {
-    backgroundColor: '#E53935',
-    borderRadius: 20,
+    backgroundColor: '#FF3B30',
+    borderRadius: 18,
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginHorizontal: 5
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  quantityText: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  quantityText: { fontSize: 16, fontWeight: '700', color: '#1F2937' },
   priceButton: {
-    backgroundColor: '#f1f1f1',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     alignItems: 'center'
   },
-  priceText: { color: '#007AFF', fontWeight: 'bold', textAlign: 'center' },
-  totalPriceText: { fontWeight: 'bold', color: '#000', textAlign: 'center' },
-  scrollView: { maxHeight: 370 },
+  priceText: { color: colors.primary, fontWeight: '700', textAlign: 'center' },
+  totalPriceText: { fontWeight: '700', color: '#111827', textAlign: 'center' },
+  scrollView: { maxHeight: 420 },
   totalContainer: {
-    marginTop: 25,
-    padding: 15,
-    backgroundColor: '#f8f8f8',
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: '#F9FAFB',
     borderTopWidth: 1,
-    borderColor: '#ddd'
+    borderColor: '#E5E7EB'
   },
   totalText: {
-    fontSize: 18,
+    fontSize: 16,
     textAlign: 'center',
-    color: '#333'
+    color: '#6B7280'
   },
   totalValue: {
-    fontWeight: 'bold',
+    fontWeight: '700',
     fontSize: 20,
-    color: '#007AFF'
+    color: colors.primary
   },
   modalOverlay: {
     flex: 1,
@@ -236,30 +237,31 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 12,
-    width: '80%',
-    elevation: 5
+    padding: 22,
+    borderRadius: 16,
+    width: '86%',
+    elevation: 6
   },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 14, textAlign: 'center', color: '#111827' },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 16,
-    marginBottom: 15
+    marginBottom: 14,
+    backgroundColor: '#F9FAFB'
   },
   modalButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center'
   },
-  modalButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  modalButtonText: { color: '#fff', fontWeight: '700', fontSize: 16, letterSpacing: 0.3 },
   cancelButton: { marginTop: 10, alignItems: 'center' },
-  cancelButtonText: { color: '#007AFF', fontSize: 16 }
+  cancelButtonText: { color: colors.primary, fontSize: 16, fontWeight: '600' }
 });
 
 export default ProductList;

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { colors } from '../theme';
 
 const ProductItemView = () => (
   <View style={styles.productItem}>
@@ -11,27 +12,28 @@ const ProductItemView = () => (
 
 const styles = StyleSheet.create({
   productItem: {
-    backgroundColor: '#941C1C',
-    marginTop:20,
-    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    marginTop: 24,
+    borderRadius: 16,
     marginBottom: 16,
     width: '100%',
-    height: '30%',
-    alignItems: 'center', // Centraliza horizontalmente
-    justifyContent: 'center', // Centraliza verticalmente
+    paddingVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   productTitle: {
-    width: '90%',
-    padding:10,
-    borderRadius:20,
-    backgroundColor: '#CD2727',
+    width: '92%',
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
     marginBottom: 8,
   },
   title: {
-    fontSize: 32,
-    
-    color: 'white',
-    textAlign: 'center', // Alinha o texto no centro horizontalmente
+    fontSize: 28,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 });
 
