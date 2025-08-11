@@ -37,21 +37,26 @@ const TableBody = ({ products, handleDecrement, handleIncrement, handleUnitPrice
             <View style={styles.quantityContainer}>
               <TouchableOpacity
                 onPress={() => handleDecrement(product.id)}
-                style={styles.buttonDecrement}
+                style={[styles.quantityButton, styles.quantityButtonMinus]}
+                activeOpacity={0.8}
               >
-                <Text style={styles.buttonText}>-</Text>
+                <Text style={styles.quantityButtonText}>−</Text>
               </TouchableOpacity>
-              <Text style={styles.quantityText}>{product.quantity}</Text>
+              <View style={styles.quantityValueWrapper}>
+                <Text style={styles.quantityValueText}>{product.quantity}</Text>
+              </View>
               <TouchableOpacity
                 onPress={() => handleIncrement(product.id)}
-                style={styles.buttonIncrement}
+                style={[styles.quantityButton, styles.quantityButtonPlus]}
+                activeOpacity={0.8}
               >
-                <Text style={styles.buttonText}>+</Text>
+                <Text style={styles.quantityButtonText}>+</Text>
               </TouchableOpacity>
             </View>,
             <TouchableOpacity
               onPress={() => handleUnitPriceClick(product.id, product.unitPrice)}
               style={styles.priceButton}
+              activeOpacity={0.85}
             >
               <Text style={styles.priceText}>R$ {product.unitPrice.toFixed(2)}</Text>
             </TouchableOpacity>,
@@ -69,6 +74,7 @@ const TableBody = ({ products, handleDecrement, handleIncrement, handleUnitPrice
 const ProductList = ({ products, setProducts }) => {
   const [newUnitPrice, setNewUnitPrice] = useState('');
   const [selectedProductId, setSelectedProductId] = useState(null);
+  const selectedProduct = products.find(p => p.id === selectedProductId) || null;
   const [modalVisible, setModalVisible] = useState(false);
 
   const totalPrice = products.reduce(
@@ -144,6 +150,11 @@ const ProductList = ({ products, setProducts }) => {
         <View style={styles.modalOverlay}>
           <Animatable.View animation="zoomIn" duration={400} style={styles.modalCard}>
             <Text style={styles.modalTitle}>Atualizar Preço</Text>
+            {selectedProduct && (
+              <Text style={styles.modalSubtitle}>
+                Produto: <Text style={styles.modalSubtitleStrong}>{selectedProduct.name}</Text>
+              </Text>
+            )}
             <TextInput
               placeholder="Novo preço"
               style={styles.input}
@@ -186,22 +197,30 @@ const styles = StyleSheet.create({
   },
   cell: { fontSize: 14, textAlign: 'center', color: '#374151' },
   quantityContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  buttonIncrement: {
-    backgroundColor: '#34C759',
-    borderRadius: 18,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginHorizontal: 5
+  quantityButton: {
+    minWidth: 34,
+    height: 34,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
   },
-  buttonDecrement: {
-    backgroundColor: '#FF3B30',
-    borderRadius: 18,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginHorizontal: 5
+  quantityButtonMinus: { backgroundColor: '#FFE4E2' },
+  quantityButtonPlus: { backgroundColor: '#DCFCE7' },
+  quantityButtonText: { fontSize: 18, fontWeight: '800', color: '#111827' },
+  quantityValueWrapper: {
+    minWidth: 38,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    marginHorizontal: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB'
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  quantityText: { fontSize: 16, fontWeight: '700', color: '#1F2937' },
+  quantityValueText: { fontSize: 16, fontWeight: '700', color: '#111827' },
   priceButton: {
     backgroundColor: '#F3F4F6',
     borderRadius: 10,
@@ -242,7 +261,9 @@ const styles = StyleSheet.create({
     width: '86%',
     elevation: 6
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 14, textAlign: 'center', color: '#111827' },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 6, textAlign: 'center', color: '#111827' },
+  modalSubtitle: { fontSize: 13, color: '#6B7280', textAlign: 'center', marginBottom: 10 },
+  modalSubtitleStrong: { fontWeight: '700', color: '#111827' },
   input: {
     borderWidth: 1,
     borderColor: '#E5E7EB',

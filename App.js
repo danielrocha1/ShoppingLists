@@ -13,6 +13,7 @@ import * as Animatable from 'react-native-animatable';
 import ProductList from './src/ProductList';
 import ProductItemView from './src/Title';
 import { colors } from './src/theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import "./app.css"
 
@@ -73,8 +74,8 @@ const App = () => {
     setModalVisible(false);
   };
 
-  return (
-    <View style={styles.container}>
+    return (
+    <LinearGradient colors={["#EEF2FF", "#F8FAFC"]} style={styles.container}>
       {/* Conteúdo rolável */}
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         <Animatable.View animation="fadeInDown" duration={800}>
@@ -95,7 +96,7 @@ const App = () => {
         </Animatable.Text>
       </ScrollView>
 
-             {/* Ação flutuante com pulse suave */}
+      {/* Ação flutuante com pulse suave */}
       <Animatable.View
         animation={pulseSoft}
         iterationCount="infinite"
@@ -156,7 +157,7 @@ const App = () => {
           </Animatable.View>
         </View>
       </Modal>
-    </View>
+    </LinearGradient>
   );
 };
 
