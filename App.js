@@ -12,6 +12,7 @@ import {
 import * as Animatable from 'react-native-animatable';
 import ProductList from './src/ProductList';
 import ProductItemView from './src/Title';
+import { colors } from './src/theme';
 
 import "./app.css"
 
@@ -94,7 +95,7 @@ const App = () => {
         </Animatable.Text>
       </ScrollView>
 
-      {/* Botão fixo no rodapé com pulse suave */}
+             {/* Ação flutuante com pulse suave */}
       <Animatable.View
         animation={pulseSoft}
         iterationCount="infinite"
@@ -161,9 +162,9 @@ const App = () => {
 
 const styles = StyleSheet.create({
   container: {
-    overflowY: "hidden",
+    overflow: 'hidden',
     flex: 1,
-    backgroundColor: '#fefefe',
+    backgroundColor: colors.background, 
     paddingTop: Platform.OS === 'android' ? 40 : 10,
   },
   footerButtonContainer: {
@@ -173,31 +174,32 @@ const styles = StyleSheet.create({
     right: 20,
   },
   addButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 14,
-    borderRadius: 10,
+    backgroundColor: colors.primary,
+    paddingVertical: 16,
+    borderRadius: 14,
     alignItems: 'center',
-    elevation: 4,
+    elevation: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 1, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
   addButtonText: {
     color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   totalText: {
-    marginTop: 30,
-    fontSize: 18,
+    marginTop: 24,
+    fontSize: 16,
     textAlign: 'center',
-    color: '#333',
+    color: '#6B7280',
   },
   totalValue: {
-    fontWeight: 'bold',
+    fontWeight: '700',
     fontSize: 20,
-    color: '#007AFF',
+    color: colors.primary,
   },
   modalOverlay: {
     flex: 1,
@@ -206,51 +208,53 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalCard: {
-    width: '85%',
+    width: '88%',
     backgroundColor: '#fff',
-    padding: 25,
+    padding: 22,
     borderRadius: 16,
-    elevation: 10,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#222',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 16,
+    color: '#1F2937',
     textAlign: 'center',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
     paddingVertical: 12,
-    paddingHorizontal: 15,
+    paddingHorizontal: 14,
     fontSize: 16,
-    marginBottom: 15,
+    marginBottom: 12,
   },
   modalButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 14,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   modalButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   cancelButton: {
     marginTop: 15,
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#007AFF',
+    color: colors.primary,
     fontSize: 16,
+    fontWeight: '600',
   },
 });
 
