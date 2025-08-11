@@ -26,19 +26,7 @@ const pulseSoft = {
 
 const App = () => {
   const [products, setProducts] = useState([
-    { id: 1, name: 'Arroz', quantity: 2, unitPrice: 5.49 },
-    { id: 2, name: 'Feijão', quantity: 1, unitPrice: 7.20 },
-    { id: 4, name: 'Macarrão', quantity: 2, unitPrice: 5.49 },
-    { id: 5, name: 'Carne 452gr', quantity: 1, unitPrice: 72.23 },
-    { id: 6, name: 'Frango 1kg', quantity: 2, unitPrice: 17.49 },
-    { id: 7, name: 'Pizza', quantity: 1, unitPrice: 12.20 },
-    { id: 8, name: 'Pão de forma', quantity: 2, unitPrice: 5.49 },
-    { id: 9, name: 'Ovo cx 30', quantity: 1, unitPrice: 20.33 },
-    { id: 10, name: 'Pão de forma', quantity: 2, unitPrice: 5.49 },
-    { id: 11, name: 'Ovo cx 30', quantity: 1, unitPrice: 20.33 },
-    { id: 12, name: 'Pão de forma', quantity: 2, unitPrice: 5.49 },
-    { id: 13, name: 'Ovo cx 30', quantity: 1, unitPrice: 20.33 },
-    { id: 3, name: 'Leite', quantity: 3, unitPrice: 4.10 }
+   
   ]);
   const [modalVisible, setModalVisible] = useState(false);
   const [productName, setProductName] = useState('');
@@ -75,7 +63,12 @@ const App = () => {
   };
 
     return (
-    <LinearGradient colors={["#EEF2FF", "#F8FAFC"]} style={styles.container}>
+    <LinearGradient colors={["rgb(9 40 141)", "rgb(2 43 85)"]} style={[
+      styles.container,
+      Platform.OS === 'web' && {
+        backgroundImage: ' linear-gradient(to bottom right, rgb(9 40 141), rgb(2 43 85));',
+      },
+    ]}>
       {/* Conteúdo rolável */}
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         <Animatable.View animation="fadeInDown" duration={800}>
@@ -134,7 +127,7 @@ const App = () => {
             />
 
             <TextInput
-              placeholder="Preço (R$)"
+              placeholder="Utilize ponto ao invés de vírgula"
               style={styles.input}
               value={productPrice}
               onChangeText={setProductPrice}
@@ -165,7 +158,6 @@ const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
     flex: 1,
-    backgroundColor: colors.background, 
     paddingTop: Platform.OS === 'android' ? 40 : 10,
   },
   footerButtonContainer: {
@@ -192,10 +184,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   totalText: {
+    fontWeight: '700',
     marginTop: 24,
     fontSize: 16,
     textAlign: 'center',
-    color: '#6B7280',
+    color: 'white',
   },
   totalValue: {
     fontWeight: '700',

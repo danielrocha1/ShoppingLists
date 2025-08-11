@@ -12,7 +12,6 @@ const ProductItemView = () => (
 
 const styles = StyleSheet.create({
   productItem: {
-    backgroundColor: '#FFFFFF',
     marginTop: 24,
     borderRadius: 16,
     marginBottom: 16,
