@@ -12,6 +12,32 @@ import { Table, Row } from 'react-native-table-component';
 import * as Animatable from 'react-native-animatable';
 import { colors } from '../theme';
 
+// Utilidades de moeda (BRL)
+const formatCurrencyBR = (value) => {
+  if (typeof value !== 'number' || isNaN(value)) return 'R$ 0,00';
+  const parts = value.toFixed(2).split('.');
+  const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const decimalPart = parts[1];
+  return `R$ ${integerPart},${decimalPart}`;
+};
+
+const formatCurrencyInput = (text) => {
+  const digits = (text || '').replace(/\D/g, '');
+  if (digits.length === 0) return '';
+  const intPart = digits.slice(0, -2) || '0';
+  const cents = digits.slice(-2).padStart(2, '0');
+  const intFormatted = intPart
+    .replace(/^0+(?=\d)/, '')
+    .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${intFormatted},${cents}`;
+};
+
+const parseCurrencyInputToNumber = (text) => {
+  const digits = (text || '').replace(/\D/g, '');
+  if (!digits) return NaN;
+  return Number(digits) / 100;
+};
+
 const TableHeader = () => (
   <View style={styles.tableHeader}>
     <Row
@@ -53,10 +79,10 @@ const TableBody = ({ products, handleDecrement, handleIncrement, handleUnitPrice
               onPress={() => handleUnitPriceClick(product.id, product.unitPrice)}
               style={styles.priceButton}
             >
-              <Text style={styles.priceText}>R$ {product.unitPrice.toFixed(2)}</Text>
+              <Text style={styles.priceText}>{formatCurrencyBR(product.unitPrice)}</Text>
             </TouchableOpacity>,
             <Text style={styles.totalPriceText}>
-              R$ {(product.quantity * product.unitPrice).toFixed(2)}
+              {formatCurrencyBR(product.quantity * product.unitPrice)}
             </Text>
           ]}
           textStyle={styles.cell}
@@ -70,11 +96,6 @@ const ProductList = ({ products, setProducts }) => {
   const [newUnitPrice, setNewUnitPrice] = useState('');
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
-
-  const totalPrice = products.reduce(
-    (acc, product) => acc + product.unitPrice * product.quantity,
-    0
-  );
 
   const handleIncrement = (productId) => {
     setProducts(prevProducts =>
@@ -100,16 +121,18 @@ const ProductList = ({ products, setProducts }) => {
 
   const handleUnitPriceClick = (productId, unitPrice) => {
     setSelectedProductId(productId);
-    setNewUnitPrice(unitPrice.toString());
+    setNewUnitPrice(formatCurrencyInput(String(Math.round(unitPrice * 100))));
     setModalVisible(true);
   };
 
   const handleUpdateUnitPrice = () => {
     if (selectedProductId && newUnitPrice.trim() !== '') {
+      const parsed = parseCurrencyInputToNumber(newUnitPrice);
+      if (isNaN(parsed)) return;
       setProducts(prevProducts =>
         prevProducts.map(product =>
           product.id === selectedProductId
-            ? { ...product, unitPrice: parseFloat(newUnitPrice) }
+            ? { ...product, unitPrice: parsed }
             : product
         )
       );
@@ -145,11 +168,11 @@ const ProductList = ({ products, setProducts }) => {
           <Animatable.View animation="zoomIn" duration={400} style={styles.modalCard}>
             <Text style={styles.modalTitle}>Atualizar Preço</Text>
             <TextInput
-              placeholder="Novo preço"
+              placeholder="Novo preço (R$ 0,00)"
               style={styles.input}
               keyboardType="numeric"
               value={newUnitPrice}
-              onChangeText={setNewUnitPrice}
+              onChangeText={(t) => setNewUnitPrice(formatCurrencyInput(t))}
             />
             <TouchableOpacity style={styles.modalButton} onPress={handleUpdateUnitPrice}>
               <Text style={styles.modalButtonText}>Salvar</Text>
@@ -185,23 +208,31 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 }
   },
   cell: { fontSize: 14, textAlign: 'center', color: '#374151' },
-  quantityContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  buttonIncrement: {
-    backgroundColor: '#34C759',
-    borderRadius: 18,
-    paddingHorizontal: 10,
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+    paddingHorizontal: 6,
     paddingVertical: 4,
-    marginHorizontal: 5
+  },
+  buttonIncrement: {
+    backgroundColor: colors.success,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginHorizontal: 6
   },
   buttonDecrement: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: colors.danger,
     borderRadius: 18,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginHorizontal: 5
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginHorizontal: 6
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  quantityText: { fontSize: 16, fontWeight: '700', color: '#1F2937' },
+  buttonText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  quantityText: { fontSize: 18, fontWeight: '800', color: '#1F2937', minWidth: 28, textAlign: 'center' },
   priceButton: {
     backgroundColor: '#F3F4F6',
     borderRadius: 10,

@@ -13,6 +13,7 @@ import * as Animatable from 'react-native-animatable';
 import ProductList from './src/ProductList';
 import ProductItemView from './src/Title';
 import { colors } from './src/theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import "./app.css"
 
@@ -21,6 +22,32 @@ const pulseSoft = {
   0: { scale: 1 },
   0.5: { scale: 1.02 },
   1: { scale: 1 },
+};
+
+// Utilidades de moeda (BRL)
+const formatCurrencyBR = (value) => {
+  if (typeof value !== 'number' || isNaN(value)) return 'R$ 0,00';
+  const parts = value.toFixed(2).split('.');
+  const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const decimalPart = parts[1];
+  return `R$ ${integerPart},${decimalPart}`;
+};
+
+const formatCurrencyInput = (text) => {
+  const digits = (text || '').replace(/\D/g, '');
+  if (digits.length === 0) return '';
+  const intPart = digits.slice(0, -2) || '0';
+  const cents = digits.slice(-2).padStart(2, '0');
+  const intFormatted = intPart
+    .replace(/^0+(?=\d)/, '')
+    .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${intFormatted},${cents}`;
+};
+
+const parseCurrencyInputToNumber = (text) => {
+  const digits = (text || '').replace(/\D/g, '');
+  if (!digits) return NaN;
+  return Number(digits) / 100;
 };
 
 const App = () => {
@@ -54,7 +81,7 @@ const App = () => {
       return;
     }
 
-    const price = parseFloat(productPrice);
+    const price = parseCurrencyInputToNumber(productPrice);
     if (isNaN(price)) {
       alert('Digite um preço válido.');
       return;
@@ -74,7 +101,12 @@ const App = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={["#0EA5E9", "#6366F1", "#A855F7"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.container}
+    >
       {/* Conteúdo rolável */}
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         <Animatable.View animation="fadeInDown" duration={800}>
@@ -91,7 +123,7 @@ const App = () => {
           delay={400}
           style={styles.totalText}
         >
-          Total: <Text style={styles.totalValue}>R$ {totalPrice.toFixed(2)}</Text>
+          Total: <Text style={styles.totalValue}>{formatCurrencyBR(totalPrice)}</Text>
         </Animatable.Text>
       </ScrollView>
 
@@ -133,10 +165,10 @@ const App = () => {
             />
 
             <TextInput
-              placeholder="Preço (R$)"
+              placeholder="Preço (R$ 0,00)"
               style={styles.input}
               value={productPrice}
-              onChangeText={setProductPrice}
+              onChangeText={(t) => setProductPrice(formatCurrencyInput(t))}
               keyboardType="numeric"
             />
 
@@ -156,7 +188,7 @@ const App = () => {
           </Animatable.View>
         </View>
       </Modal>
-    </View>
+    </LinearGradient>
   );
 };
 
@@ -164,7 +196,6 @@ const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
     flex: 1,
-    backgroundColor: colors.background, 
     paddingTop: Platform.OS === 'android' ? 40 : 10,
   },
   footerButtonContainer: {
@@ -194,12 +225,12 @@ const styles = StyleSheet.create({
     marginTop: 24,
     fontSize: 16,
     textAlign: 'center',
-    color: '#6B7280',
+    color: '#E5E7EB',
   },
   totalValue: {
     fontWeight: '700',
     fontSize: 20,
-    color: colors.primary,
+    color: '#FFFFFF',
   },
   modalOverlay: {
     flex: 1,
