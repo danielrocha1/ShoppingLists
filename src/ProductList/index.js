@@ -5,86 +5,208 @@ import {
   TouchableOpacity,
   StyleSheet,
   TextInput,
-  Modal,
-  ScrollView
+  Modal as RNModal,
+  ScrollView,
+  Platform,
 } from 'react-native';
-import { Table, Row } from 'react-native-table-component';
-import * as Animatable from 'react-native-animatable';
-import { colors } from '../theme';
+import { colors, spacing, radius, fontSize, fontWeight, shadow } from '../theme';
 
-const TableHeader = () => (
-  <View style={styles.tableHeader}>
-    <Row
-      data={['Nome', 'Qtd', 'Preço Unit.', 'Total']}
-      textStyle={styles.headerText}
-    />
-  </View>
-);
+// antd components (apenas web)
+let AntdTable, AntdModal, AntdButton, AntdInputNumber, AntdSpace, AntdTag, AntdTypography;
+if (Platform.OS === 'web') {
+  const antd = require('antd');
+  AntdTable = antd.Table;
+  AntdModal = antd.Modal;
+  AntdButton = antd.Button;
+  AntdInputNumber = antd.InputNumber;
+  AntdSpace = antd.Space;
+  AntdTag = antd.Tag;
+  AntdTypography = antd.Typography;
+}
 
-const TableBody = ({ products, handleDecrement, handleIncrement, handleUnitPriceClick }) => (
-  <View style={styles.tableBody}>
-    {products.map((product, index) => (
-      <Animatable.View
-        key={product.id}
-        animation="fadeInUp"
-        duration={500}
-        delay={index * 100}
-        style={styles.productRow}
-      >
-        <Row
-          data={[
-            product.name,
-            <View style={styles.quantityContainer}>
-              <TouchableOpacity
-                onPress={() => handleDecrement(product.id)}
-                style={[styles.quantityButton, styles.quantityButtonMinus]}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.quantityButtonText}>−</Text>
-              </TouchableOpacity>
-              <View style={styles.quantityValueWrapper}>
-                <Text style={styles.quantityValueText}>{product.quantity}</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => handleIncrement(product.id)}
-                style={[styles.quantityButton, styles.quantityButtonPlus]}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.quantityButtonText}>+</Text>
-              </TouchableOpacity>
-            </View>,
-            <TouchableOpacity
-              onPress={() => handleUnitPriceClick(product.id, product.unitPrice)}
-              style={styles.priceButton}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.priceText}>R$ {product.unitPrice.toFixed(2)}</Text>
-            </TouchableOpacity>,
-            <Text style={styles.totalPriceText}>
-              R$ {(product.quantity * product.unitPrice).toFixed(2)}
-            </Text>
-          ]}
-          textStyle={styles.cell}
-        />
-      </Animatable.View>
-    ))}
-  </View>
-);
+// ======== COMPONENTE WEB (antd Table puro, sem RN) ========
+const ProductListWeb = ({ products, setProducts }) => {
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [newUnitPrice, setNewUnitPrice] = useState(0);
 
-const ProductList = ({ products, setProducts }) => {
-  const [newUnitPrice, setNewUnitPrice] = useState('');
-  const [selectedProductId, setSelectedProductId] = useState(null);
-  const selectedProduct = products.find(p => p.id === selectedProductId) || null;
-  const [modalVisible, setModalVisible] = useState(false);
+  const handleIncrement = (productId) => {
+    setProducts(prev =>
+      prev.map(p => p.id === productId ? { ...p, quantity: p.quantity + 1 } : p)
+    );
+  };
+
+  const handleDecrement = (productId) => {
+    setProducts(prev =>
+      prev.map(p => p.id === productId && p.quantity > 0
+        ? { ...p, quantity: p.quantity - 1 }
+        : p
+      ).filter(p => p.quantity !== 0)
+    );
+  };
+
+  const handleEditPrice = (product) => {
+    setEditingProduct(product);
+    setNewUnitPrice(product.unitPrice);
+  };
+
+  const handleSavePrice = () => {
+    if (editingProduct && newUnitPrice > 0) {
+      setProducts(prev =>
+        prev.map(p =>
+          p.id === editingProduct.id
+            ? { ...p, unitPrice: newUnitPrice }
+            : p
+        )
+      );
+      setEditingProduct(null);
+    }
+  };
+
+  const columns = [
+    {
+      title: 'Produto',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text) => (
+        <span style={{ fontWeight: 600, color: colors.text, fontSize: 14 }}>
+          {text}
+        </span>
+      ),
+    },
+    {
+      title: 'Qtd',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      render: (_, record) => (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+          <AntdButton
+            size="small"
+            shape="circle"
+            danger
+            onClick={() => handleDecrement(record.id)}
+          >
+            −
+          </AntdButton>
+          <AntdTag color="default" style={{ fontSize: 16, fontWeight: 700, minWidth: 32, textAlign: 'center' }}>
+            {record.quantity}
+          </AntdTag>
+          <AntdButton
+            size="small"
+            shape="circle"
+            type="primary"
+            onClick={() => handleIncrement(record.id)}
+          >
+            +
+          </AntdButton>
+        </div>
+      ),
+    },
+    {
+      title: 'Preço Unit.',
+      dataIndex: 'unitPrice',
+      key: 'unitPrice',
+      render: (price, record) => (
+        <AntdButton
+          type="link"
+          size="small"
+          onClick={() => handleEditPrice(record)}
+          style={{ fontWeight: 600, padding: 0 }}
+        >
+          R$ {price.toFixed(2)}
+        </AntdButton>
+      ),
+    },
+    {
+      title: 'Total',
+      key: 'total',
+      render: (_, record) => (
+        <span style={{ fontWeight: 700, color: colors.text }}>
+          R$ {(record.quantity * record.unitPrice).toFixed(2)}
+        </span>
+      ),
+    },
+  ];
 
   const totalPrice = products.reduce(
-    (acc, product) => acc + product.unitPrice * product.quantity,
+    (acc, p) => acc + p.unitPrice * p.quantity,
     0
   );
 
+  return (
+    <div style={stylesWeb.wrapper}>
+      <AntdTable
+        dataSource={products}
+        columns={columns}
+        rowKey="id"
+        pagination={false}
+        size="middle"
+        bordered
+        scroll={{ x: 500 }}
+        locale={{ emptyText: 'Nenhum produto adicionado ainda' }}
+        summary={() => (
+          <AntdTable.Summary fixed>
+            <AntdTable.Summary.Row>
+              <AntdTable.Summary.Cell index={0} colSpan={3}>
+                <span style={{ fontWeight: 700, fontSize: 15 }}>Total Geral</span>
+              </AntdTable.Summary.Cell>
+              <AntdTable.Summary.Cell index={1}>
+                <span style={{ fontWeight: 700, fontSize: 18, color: colors.primary }}>
+                  R$ {totalPrice.toFixed(2)}
+                </span>
+              </AntdTable.Summary.Cell>
+            </AntdTable.Summary.Row>
+          </AntdTable.Summary>
+        )}
+      />
+
+      {/* Modal de edição de preço (web) */}
+      <AntdModal
+        title="Editar Preço Unitário"
+        open={!!editingProduct}
+        onCancel={() => setEditingProduct(null)}
+        footer={[
+          <AntdButton key="cancel" onClick={() => setEditingProduct(null)}>
+            Cancelar
+          </AntdButton>,
+          <AntdButton key="save" type="primary" onClick={handleSavePrice}>
+            Salvar
+          </AntdButton>,
+        ]}
+        destroyOnClose
+      >
+        {editingProduct && (
+          <div>
+            <AntdTypography.Text strong style={{ fontSize: 15, display: 'block', marginBottom: 12 }}>
+              {editingProduct.name}
+            </AntdTypography.Text>
+            <AntdInputNumber
+              style={{ width: '100%' }}
+              size="large"
+              prefix="R$"
+              min={0.01}
+              step={0.5}
+              precision={2}
+              value={newUnitPrice}
+              onChange={(val) => setNewUnitPrice(val || 0)}
+              autoFocus
+            />
+          </div>
+        )}
+      </AntdModal>
+    </div>
+  );
+};
+
+// ======== COMPONENTE NATIVO (React Native) ========
+const ProductListNative = ({ products, setProducts }) => {
+  const [newUnitPrice, setNewUnitPrice] = useState('');
+  const [selectedProductId, setSelectedProductId] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const selectedProduct = products.find(p => p.id === selectedProductId) || null;
+
   const handleIncrement = (productId) => {
-    setProducts(prevProducts =>
-      prevProducts.map(product =>
+    setProducts(prev =>
+      prev.map(product =>
         product.id === productId
           ? { ...product, quantity: product.quantity + 1 }
           : product
@@ -93,8 +215,8 @@ const ProductList = ({ products, setProducts }) => {
   };
 
   const handleDecrement = (productId) => {
-    setProducts(prevProducts =>
-      prevProducts
+    setProducts(prev =>
+      prev
         .map(product =>
           product.id === productId && product.quantity > 0
             ? { ...product, quantity: product.quantity - 1 }
@@ -112,10 +234,15 @@ const ProductList = ({ products, setProducts }) => {
 
   const handleUpdateUnitPrice = () => {
     if (selectedProductId && newUnitPrice.trim() !== '') {
-      setProducts(prevProducts =>
-        prevProducts.map(product =>
+      const parsed = parseFloat(newUnitPrice.replace(',', '.'));
+      if (isNaN(parsed) || parsed <= 0) {
+        alert('Digite um preço válido. Use ponto ou vírgula (ex: 19.90 ou 19,90).');
+        return;
+      }
+      setProducts(prev =>
+        prev.map(product =>
           product.id === selectedProductId
-            ? { ...product, unitPrice: parseFloat(newUnitPrice) }
+            ? { ...product, unitPrice: parsed }
             : product
         )
       );
@@ -125,34 +252,96 @@ const ProductList = ({ products, setProducts }) => {
     }
   };
 
-  return (
-    <View style={styles.container}>
-      <TableHeader />
-      <ScrollView style={styles.scrollView}>
-        <TableBody
-          products={products}
-          handleDecrement={handleDecrement}
-          handleIncrement={handleIncrement}
-          handleUnitPriceClick={handleUnitPriceClick}
-        />
+  const totalPrice = products.reduce(
+    (acc, product) => acc + product.unitPrice * product.quantity,
+    0
+  );
 
-        {/* Total mais para baixo */}
-      
+  return (
+    <View style={styles.nativeContainer}>
+      <View style={styles.tableHeader}>
+        <View style={styles.headerRow}>
+          <Text style={[styles.headerCell, styles.headerCellName]}>Nome</Text>
+          <Text style={[styles.headerCell, styles.headerCellQty]}>Qtd</Text>
+          <Text style={[styles.headerCell, styles.headerCellPrice]}>Preço Unit.</Text>
+          <Text style={[styles.headerCell, styles.headerCellTotal]}>Total</Text>
+        </View>
+      </View>
+
+      <ScrollView style={styles.tableBodyScroll}>
+        {products.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>Nenhum produto adicionado</Text>
+          </View>
+        ) : (
+          products.map((product, index) => (
+            <View
+              key={product.id}
+              style={[styles.productRow, { animationDelay: `${index * 60}ms` }]}
+            >
+              <View style={styles.productRowInner}>
+                <Text style={styles.productName} numberOfLines={1}>
+                  {product.name}
+                </Text>
+
+                <View style={styles.quantityContainer}>
+                  <TouchableOpacity
+                    onPress={() => handleDecrement(product.id)}
+                    style={[styles.qtyButton, styles.qtyButtonMinus]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.qtyButtonText}>−</Text>
+                  </TouchableOpacity>
+                  <View style={styles.qtyValue}>
+                    <Text style={styles.qtyValueText}>{product.quantity}</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => handleIncrement(product.id)}
+                    style={[styles.qtyButton, styles.qtyButtonPlus]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.qtyButtonText}>+</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => handleUnitPriceClick(product.id, product.unitPrice)}
+                  style={styles.priceChip}
+                  activeOpacity={0.75}
+                >
+                  <Text style={styles.priceText}>
+                    R$ {product.unitPrice.toFixed(2)}
+                  </Text>
+                </TouchableOpacity>
+
+                <Text style={styles.totalCellText}>
+                  R$ {(product.quantity * product.unitPrice).toFixed(2)}
+                </Text>
+              </View>
+            </View>
+          ))
+        )}
       </ScrollView>
 
-      {/* Modal para atualizar preço */}
-      <Modal
+      {products.length > 0 && (
+        <View style={styles.totalBar}>
+          <Text style={styles.totalLabel}>Total Geral</Text>
+          <Text style={styles.totalValue}>R$ {totalPrice.toFixed(2)}</Text>
+        </View>
+      )}
+
+      <RNModal
         animationType="fade"
         transparent
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <Animatable.View animation="zoomIn" duration={400} style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Atualizar Preço</Text>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Editar Preço</Text>
             {selectedProduct && (
               <Text style={styles.modalSubtitle}>
-                Produto: <Text style={styles.modalSubtitleStrong}>{selectedProduct.name}</Text>
+                Produto: <Text style={{ fontWeight: 700 }}>{selectedProduct.name}</Text>
               </Text>
             )}
             <TextInput
@@ -161,128 +350,264 @@ const ProductList = ({ products, setProducts }) => {
               keyboardType="numeric"
               value={newUnitPrice}
               onChangeText={setNewUnitPrice}
+              placeholderTextColor={colors.textMuted}
             />
-            <TouchableOpacity style={styles.modalButton} onPress={handleUpdateUnitPrice}>
-              <Text style={styles.modalButtonText}>Salvar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setModalVisible(false)}
-              style={styles.cancelButton}
-            >
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </TouchableOpacity>
-          </Animatable.View>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible(false);
+                  setNewUnitPrice('');
+                }}
+                style={styles.cancelButton}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleUpdateUnitPrice}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.saveButtonText}>Salvar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-      </Modal>
+      </RNModal>
     </View>
   );
 };
 
+// ======== COMPONENTE PRINCIPAL ========
+const ProductList = (props) => {
+  if (Platform.OS === 'web') {
+    return <ProductListWeb {...props} />;
+  }
+  return <ProductListNative {...props} />;
+};
+
+const stylesWeb = {
+  wrapper: {
+    background: colors.surface,
+    borderRadius: 12,
+    overflow: 'hidden',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+    marginLeft: 0,
+    marginRight: 0,
+  },
+};
+
 const styles = StyleSheet.create({
-  container: { backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden' },
-  tableHeader: { backgroundColor: colors.primary, paddingVertical: 12 },
-  headerText: { fontSize: 14, fontWeight: '700', color: '#fff', textAlign: 'center', letterSpacing: 0.3 },
-  tableBody: { paddingVertical: 6 },
-  productRow: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    marginVertical: 6,
-    marginHorizontal: 10,
-    paddingVertical: 6,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 }
+  nativeContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    ...shadow.card,
+    marginHorizontal: spacing.md,
   },
-  cell: { fontSize: 14, textAlign: 'center', color: '#374151' },
-  quantityContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  quantityButton: {
-    minWidth: 34,
-    height: 34,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 8,
+  tableHeader: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
   },
-  quantityButtonMinus: { backgroundColor: '#FFE4E2' },
-  quantityButtonPlus: { backgroundColor: '#DCFCE7' },
-  quantityButtonText: { fontSize: 18, fontWeight: '800', color: '#111827' },
-  quantityValueWrapper: {
-    minWidth: 38,
-    height: 34,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-    marginHorizontal: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB'
+  headerRow: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.sm,
   },
-  quantityValueText: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  priceButton: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    alignItems: 'center'
-  },
-  priceText: { color: colors.primary, fontWeight: '700', textAlign: 'center' },
-  totalPriceText: { fontWeight: '700', color: '#111827', textAlign: 'center' },
-  scrollView: { maxHeight: 420 },
-  totalContainer: {
-    marginTop: 20,
-    padding: 16,
-    backgroundColor: '#F9FAFB',
-    borderTopWidth: 1,
-    borderColor: '#E5E7EB'
-  },
-  totalText: {
-    fontSize: 16,
+  headerCell: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: '#fff',
     textAlign: 'center',
-    color: '#6B7280'
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  headerCellName: { flex: 2.2 },
+  headerCellQty: { flex: 2 },
+  headerCellPrice: { flex: 1.8 },
+  headerCellTotal: { flex: 1.5 },
+  tableBodyScroll: {
+    maxHeight: 420,
+  },
+  emptyState: {
+    padding: spacing.xxxl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: fontSize.md,
+  },
+  productRow: {
+    marginVertical: spacing.xs,
+    marginHorizontal: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    ...shadow.card,
+    borderWidth: 1,
+    borderColor: colors.borderSecondary,
+  },
+  productRowInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  productName: {
+    flex: 2.2,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+    color: colors.text,
+    paddingHorizontal: spacing.xs,
+  },
+  quantityContainer: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qtyButton: {
+    width: 30,
+    height: 30,
+    borderRadius: radius.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qtyButtonMinus: {
+    backgroundColor: colors.dangerBg,
+  },
+  qtyButtonPlus: {
+    backgroundColor: colors.successBg,
+  },
+  qtyButtonText: {
+    fontSize: 16,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  qtyValue: {
+    minWidth: 34,
+    height: 30,
+    borderRadius: radius.sm,
+    backgroundColor: colors.subtle,
+    marginHorizontal: spacing.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderSecondary,
+  },
+  qtyValueText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  priceChip: {
+    flex: 1.8,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    alignItems: 'center',
+    marginHorizontal: spacing.xs,
+  },
+  priceText: {
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+    fontSize: fontSize.sm,
+    textAlign: 'center',
+  },
+  totalCellText: {
+    flex: 1.5,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+    textAlign: 'center',
+    fontSize: fontSize.md,
+  },
+  totalBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    backgroundColor: colors.primaryBg,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSecondary,
+  },
+  totalLabel: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
   },
   totalValue: {
-    fontWeight: '700',
-    fontSize: 20,
-    color: colors.primary
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   modalCard: {
-    backgroundColor: '#fff',
-    padding: 22,
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    padding: spacing.xxl,
+    borderRadius: radius.lg,
     width: '86%',
-    elevation: 6
+    ...shadow.elevated,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 6, textAlign: 'center', color: '#111827' },
-  modalSubtitle: { fontSize: 13, color: '#6B7280', textAlign: 'center', marginBottom: 10 },
-  modalSubtitleStrong: { fontWeight: '700', color: '#111827' },
+  modalTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+    color: colors.text,
+  },
+  modalSubtitle: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
   input: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    marginBottom: 14,
-    backgroundColor: '#F9FAFB'
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    fontSize: fontSize.lg,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.subtle,
+    color: colors.text,
   },
-  modalButton: {
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  saveButton: {
+    flex: 1,
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center'
+    borderRadius: radius.md,
+    paddingVertical: spacing.md - 2,
+    alignItems: 'center',
+    ...shadow.card,
   },
-  modalButtonText: { color: '#fff', fontWeight: '700', fontSize: 16, letterSpacing: 0.3 },
-  cancelButton: { marginTop: 10, alignItems: 'center' },
-  cancelButtonText: { color: colors.primary, fontSize: 16, fontWeight: '600' }
+  saveButtonText: {
+    color: '#fff',
+    fontWeight: fontWeight.bold,
+    fontSize: fontSize.lg,
+  },
+  cancelButton: {
+    flex: 1,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md - 2,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  cancelButtonText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.medium,
+  },
 });
 
 export default ProductList;
