@@ -435,10 +435,13 @@ const stylesWeb = {
   page: {
     minHeight: '100vh',
     background: `linear-gradient(135deg, ${colors.gradientStart} 0%, ${colors.gradientEnd} 100%)`,
-    paddingBottom: 100,
+    paddingBottom: 120,
+    paddingLeft: 0,
+    paddingRight: 0,
   },
   totalCard: {
     marginTop: 16,
+    marginHorizontal: spacing.md,
     background: 'rgba(255,255,255,0.12)',
     backdropFilter: 'blur(10px)',
     WebkitBackdropFilter: 'blur(10px)',
@@ -453,6 +456,9 @@ const stylesWeb = {
     alignItems: 'center',
     marginTop: 12,
     marginBottom: -4,
+    gap: 8,
+    flexWrap: 'wrap',
+    paddingHorizontal: spacing.md,
   },
   clearButton: {
     color: 'rgba(255,255,255,0.7)',
@@ -460,6 +466,8 @@ const stylesWeb = {
     letterSpacing: 0.3,
     padding: '4px 8px',
     borderRadius: 6,
+    flex: '1 1 auto',
+    minWidth: 'fit-content',
   },
   fab: {
     position: 'fixed',
@@ -468,6 +476,8 @@ const stylesWeb = {
     bottom: 24,
     zIndex: 1000,
     whiteSpace: 'nowrap',
+    paddingLeft: spacing.md,
+    paddingRight: spacing.md,
   },
   fabButton: {
     height: 52,
