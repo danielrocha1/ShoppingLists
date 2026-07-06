@@ -363,11 +363,159 @@ body {
 /* ========================================
    IMPRESSÃO / PDF
    ======================================== */
+/* ========================================
+   DELETE BOX E CLEAR BOX (HOVER INVERTE CORES)
+   ======================================== */
+.delete-box,
+.clear-box {
+  transition: all 0.2s ease !important;
+}
+
+.delete-box .ant-btn,
+.clear-box .ant-btn {
+  width: 100% !important;
+  height: auto !important;
+  padding: 0 !important;
+}
+
+.clear-box .ant-btn {
+  background: #fff !important;
+}
+
+.print-content {
+  display: none;
+}
+
 @media print {
   body {
     background: #fff !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
+  .app-content {
+    display: none !important;
+  }
+
+  .print-content {
+    display: block !important;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
+    padding: 32px 40px !important;
+    max-width: 800px !important;
+    margin: 0 auto !important;
+    color: #1a1a2e !important;
+  }
+
+  .print-content .print-header {
+    text-align: center !important;
+    border-bottom: 3px solid #1677FF !important;
+    padding-bottom: 20px !important;
+    margin-bottom: 24px !important;
+  }
+
+  .print-content .print-store-icon {
+    font-size: 40px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .print-content .print-store-name {
+    font-size: 26px !important;
+    font-weight: 700 !important;
+    color: #1a1a2e !important;
+    margin: 4px 0 2px !important;
+  }
+
+  .print-content .print-date {
+    font-size: 13px !important;
+    color: #888 !important;
+    margin: 0 !important;
+  }
+
+  .print-content .print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 8px !important;
+    font-size: 13px !important;
+  }
+
+  .print-content .print-table th {
+    background: #1677FF !important;
+    color: #fff !important;
+    padding: 10px 12px !important;
+    text-align: left !important;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-content .print-table td {
+    padding: 8px 12px !important;
+    border-bottom: 1px solid #eee !important;
+    color: #333 !important;
+  }
+
+  .print-content .print-table tr:nth-child(even) td {
+    background: #f8f9ff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-content .print-table .print-num {
+    width: 40px !important;
+    text-align: center !important;
+    color: #999 !important;
+  }
+
+  .print-content .print-table .print-name {
+    font-weight: 500 !important;
+  }
+
+  .print-content .print-table .print-qty {
+    text-align: center !important;
+    width: 80px !important;
+  }
+
+  .print-content .print-table .print-price {
+    text-align: right !important;
+    width: 100px !important;
+  }
+
+  .print-content .print-table .print-subtotal {
+    text-align: right !important;
+    width: 110px !important;
+    font-weight: 600 !important;
+  }
+
+  .print-content .print-summary {
+    margin-top: 20px !important;
+    border-top: 2px solid #1677FF !important;
+    padding-top: 16px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+
+  .print-content .print-total-label {
+    font-size: 14px !important;
+    color: #666 !important;
+  }
+
+  .print-content .print-total-value {
+    font-size: 28px !important;
+    font-weight: 800 !important;
+    color: #1677FF !important;
+  }
+
+  .print-content .print-meta {
+    text-align: right !important;
+    font-size: 12px !important;
+    color: #999 !important;
+  }
+
+  /* Hide everything else */
   .fab-btn,
   .ant-btn,
   .ant-drawer,
@@ -379,24 +527,5 @@ body {
   .ant-popconfirm,
   .ant-dropdown-trigger {
     display: none !important;
-  }
-
-  .ant-table-content {
-    overflow: visible !important;
-  }
-
-  .ant-table {
-    font-size: 11pt !important;
-  }
-
-  .ant-table-thead > tr > th {
-    background: #1677FF !important;
-    color: #fff !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  .ant-table-tbody > tr > td {
-    padding: 6pt 4pt !important;
   }
 }

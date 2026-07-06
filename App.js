@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
@@ -20,7 +20,7 @@ import { colors, spacing, radius, fontSize, fontWeight, shadow } from './src/the
 import "./app.css";
 
 // antd components (web-only)
-let AntdButton, AntdDrawer, AntdInput, AntdTypography, AntdSpace, AntdApp, AntdMessage, AntdPopconfirm, AntdDropdown;
+let AntdButton, AntdDrawer, AntdInput, AntdTypography, AntdSpace, AntdApp, AntdMessage, AntdPopconfirm, AntdDropdown, AntdModal;
 let ConfigProvider, antdThemeObj;
 if (Platform.OS === 'web') {
   const antd = require('antd');
@@ -34,6 +34,7 @@ if (Platform.OS === 'web') {
   AntdMessage = antd.message;
   AntdPopconfirm = antd.Popconfirm;
   AntdDropdown = antd.Dropdown;
+  AntdModal = antd.Modal;
   ConfigProvider = antd.ConfigProvider;
 
   antdThemeObj = {
@@ -66,6 +67,18 @@ if (Platform.OS === 'web') {
     },
   };
 }
+
+// Templates de lugares para sugestionar ao criar nova lista
+const LIST_TEMPLATES = [
+  { icon: '🏪', name: 'Mercado' },
+  { icon: '💊', name: 'Farmácia' },
+  { icon: '🐾', name: 'PetShop' },
+  { icon: '🥩', name: 'Açougue' },
+  { icon: '🥬', name: 'Hortifruti' },
+  { icon: '🥖', name: 'Padaria' },
+  { icon: '🏬', name: 'Atacado' },
+  { icon: '📦', name: 'Online' },
+];
 
 // Converte vírgula para ponto e parseia como número (acessível em todo o módulo)
 const parsePrice = (value) => parseFloat(value.replace(',', '.'));
@@ -142,45 +155,112 @@ const AddProductDrawerWeb = ({ visible, onClose, productName, setProductName, pr
 
 // ======== APP ========
 const App = () => {
-  const [products, setProducts] = useState([]);
+  const [lists, setLists] = useState([]);
+  const [activeListId, setActiveListId] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+
+  // Estado do drawer/modal de adicionar produto
   const [modalVisible, setModalVisible] = useState(false);
   const [productName, setProductName] = useState('');
   const [productPrice, setProductPrice] = useState('');
-  const [loaded, setLoaded] = useState(false);
 
-  // Carregar produtos salvos ao iniciar
+  // Estado do modal de criar nova lista
+  const [showNewListModal, setShowNewListModal] = useState(false);
+  const [newListName, setNewListName] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+
+  // Lista ativa e produtos derivados
+  const activeList = lists.find(l => l.id === activeListId) || null;
+  const products = activeList ? activeList.products : [];
+
+  // Wrapper para atualizar produtos da lista ativa
+  const setProducts = useCallback((updater) => {
+    setLists(prev => prev.map(list =>
+      list.id === activeListId
+        ? { ...list, products: typeof updater === 'function' ? updater(list.products) : updater }
+        : list
+    ));
+  }, [activeListId]);
+
+  // Carregar listas salvas ao iniciar
   useEffect(() => {
-    const loadProducts = async () => {
+    const loadLists = async () => {
       try {
-        const stored = await AsyncStorage.getItem('@shopping_products');
+        const stored = await AsyncStorage.getItem('@shopping_lists');
         if (stored !== null) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setProducts(parsed);
+          if (parsed && Array.isArray(parsed.lists)) {
+            setLists(parsed.lists);
+            if (parsed.activeListId && parsed.lists.some(l => l.id === parsed.activeListId)) {
+              setActiveListId(parsed.activeListId);
+            } else if (parsed.lists.length > 0) {
+              setActiveListId(parsed.lists[0].id);
+            }
           }
         }
       } catch (e) {
-        console.warn('Erro ao carregar produtos:', e);
+        console.warn('Erro ao carregar listas:', e);
       } finally {
         setLoaded(true);
       }
     };
-    loadProducts();
+    loadLists();
   }, []);
 
-  // Salvar produtos sempre que a lista mudar (após carregamento inicial)
+  // Salvar listas sempre que mudar (após carregamento inicial)
   useEffect(() => {
     if (loaded) {
-      const saveProducts = async () => {
+      const saveLists = async () => {
         try {
-          await AsyncStorage.setItem('@shopping_products', JSON.stringify(products));
+          await AsyncStorage.setItem('@shopping_lists', JSON.stringify({ lists, activeListId }));
         } catch (e) {
-          console.warn('Erro ao salvar produtos:', e);
+          console.warn('Erro ao salvar listas:', e);
         }
       };
-      saveProducts();
+      saveLists();
     }
-  }, [products, loaded]);
+  }, [lists, activeListId, loaded]);
+
+  // Handlers de gerenciamento de listas
+  const handleCreateList = () => {
+    if (!selectedTemplate) {
+      if (Platform.OS === 'web') AntdMessage?.warning('Selecione o tipo de estabelecimento.');
+      else alert('Selecione o tipo de estabelecimento.');
+      return;
+    }
+    if (newListName.trim() === '') {
+      if (Platform.OS === 'web') AntdMessage?.warning('Digite o nome do estabelecimento.');
+      else alert('Digite o nome do estabelecimento.');
+      return;
+    }
+    const fullName = `${selectedTemplate.name} ${newListName.trim()}`;
+    const newList = {
+      id: Date.now(),
+      name: fullName,
+      products: [],
+      createdAt: new Date().toISOString(),
+    };
+    setLists(prev => [...prev, newList]);
+    setActiveListId(newList.id);
+    setNewListName('');
+    setSelectedTemplate(null);
+    setShowNewListModal(false);
+    if (Platform.OS === 'web') AntdMessage?.success(`Lista "${fullName}" criada!`);
+  };
+
+  const handleSwitchList = (id) => {
+    setActiveListId(id);
+  };
+
+  const handleDeleteList = (id) => {
+    setLists(prev => {
+      const filtered = prev.filter(l => l.id !== id);
+      if (activeListId === id) {
+        setActiveListId(filtered.length > 0 ? filtered[0].id : null);
+      }
+      return filtered;
+    });
+  };
 
   const totalPrice = products.reduce(
     (acc, product) => acc + product.unitPrice * product.quantity,
@@ -219,9 +299,35 @@ const App = () => {
     return (
       <ConfigProvider theme={antdThemeObj}>
         <AntdApp>
-          <div style={stylesWeb.page}>
-            <div style={stylesWeb.container}>
-              <ProductItemView itemCount={products.length} />
+          <div style={stylesWeb.page} className="app-content">
+            {lists.length === 0 ? (
+              <div style={stylesWeb.emptyState}>
+                <div style={stylesWeb.emptyIcon}>🛒</div>
+                <AntdTypography.Title level={3} style={{ color: '#fff', margin: 0, textAlign: 'center' }}>
+                  Minhas Listas
+                </AntdTypography.Title>
+                <AntdTypography.Text style={{ color: 'rgba(255,255,255,0.75)', textAlign: 'center', marginTop: 8, display: 'block' }}>
+                  Você ainda não tem nenhuma lista de compras.
+                </AntdTypography.Text>
+                <AntdButton
+                  type="primary"
+                  size="large"
+                  onClick={() => setShowNewListModal(true)}
+                  style={{ marginTop: 20, fontWeight: 600, paddingInline: 28 }}
+                >
+                  ➕ Criar primeira lista
+                </AntdButton>
+              </div>
+            ) : (
+              <div style={stylesWeb.container}>
+              <ProductItemView
+                itemCount={products.length}
+                currentListName={activeList?.name || 'Lista de Compras'}
+                lists={lists}
+                activeListId={activeListId}
+                onSwitchList={handleSwitchList}
+                onCreateList={() => setShowNewListModal(true)}
+              />
 
               {products.length > 0 && (
                 <div style={stylesWeb.clearRow}>
@@ -232,64 +338,68 @@ const App = () => {
                           key: 'text',
                           icon: <span style={{ fontSize: 14 }}>📄</span>,
                           label: 'Exportar como texto',
-                          onClick: () => exportAsText(products, totalPrice),
+                          onClick: () => exportAsText(products, totalPrice, activeList?.name),
                         },
                         {
                           key: 'pdf',
                           icon: <span style={{ fontSize: 14 }}>📕</span>,
                           label: 'Exportar como PDF',
-                          onClick: () => exportAsPdf(products, totalPrice),
+                          onClick: () => exportAsPdf(products, totalPrice, activeList?.name),
                         },
                       ],
                     }}
                     placement="bottomLeft"
                   >
-                    <AntdButton
-                      type="text"
-                      size="small"
-                      icon={<span style={{ fontSize: 14 }}>📥</span>}
-                      style={stylesWeb.clearButton}
-                    >
-                      Exportar
-                    </AntdButton>
+                    <div style={{ border: '1px dashed rgba(255,255,255,0.25)', borderRadius: 6, display: 'inline-flex', transition: 'all 0.2s ease' }}>
+                      <AntdButton
+                        type="text"
+                        size="small"
+                        icon={<span style={{ fontSize: 14 }}>📥</span>}
+                        style={stylesWeb.clearButton}
+                      >
+                        Exportar
+                      </AntdButton>
+                    </div>
                   </AntdDropdown>
 
-                  <AntdPopconfirm
-                    title="Limpar lista"
-                    description="Tem certeza que deseja remover todos os produtos?"
-                    onConfirm={() => {
-                      const backup = [...products];
-                      setProducts([]);
-                      const key = 'clear_undo';
-                      AntdMessage.open({
-                        key,
-                        type: 'success',
-                        content: 'Lista limpa! Clique para desfazer',
-                        duration: 6,
-                        onClick: () => {
-                          setProducts(backup);
-                          AntdMessage.destroy(key);
-                        },
-                      });
-                    }}
-                    okText="Sim, limpar"
-                    cancelText="Cancelar"
-                    placement="bottomRight"
-                  >
-                    <AntdButton
-                      type="text"
-                      size="small"
-                      icon={<span style={{ fontSize: 14 }}>🗑️</span>}
-                      style={stylesWeb.clearButton}
+                  <div className="clear-box" style={{ border: '1.5px dashed #ff4d4f', borderRadius: 6, padding: '2px 4px', backgroundColor: '#fff', transition: 'all 0.2s ease' }}>
+                    <AntdPopconfirm
+                      title="Limpar lista"
+                      description="Tem certeza que deseja remover todos os produtos?"
+                      onConfirm={() => {
+                        const backup = [...products];
+                        setProducts([]);
+                        const key = 'clear_undo';
+                        AntdMessage.open({
+                          key,
+                          type: 'success',
+                          content: 'Lista limpa! Clique para desfazer',
+                          duration: 6,
+                          onClick: () => {
+                            setProducts(backup);
+                            AntdMessage.destroy(key);
+                          },
+                        });
+                      }}
+                      okText="Sim, limpar"
+                      cancelText="Cancelar"
+                      placement="bottomRight"
                     >
-                      Limpar lista
-                    </AntdButton>
-                  </AntdPopconfirm>
+                      <AntdButton
+                        type="text"
+                        size="small"
+                        icon={<span style={{ fontSize: 14 }}>🗑️</span>}
+                        style={{ ...stylesWeb.clearButton, color: '#ff4d4f' }}
+                      >
+                        Limpar lista
+                      </AntdButton>
+                    </AntdPopconfirm>
+                  </div>
                 </div>
               )}
 
               <div style={{ marginTop: 16 }}>
-                <ProductList products={products} setProducts={setProducts} />
+                <ProductList products={products} setProducts={setProducts} lists={lists} activeListId={activeListId} />
               </div>
 
               {products.length > 0 && (
@@ -303,41 +413,276 @@ const App = () => {
                 </div>
               )}
             </div>
+            )}
+          </div>
+
+            {/* Conteúdo para impressão/PDF (fora do app-content) */}
+            {activeList && products.length > 0 && (
+              <div className="print-content">
+                <div className="print-header">
+                  <div className="print-store-icon">🛒</div>
+                  <div className="print-store-name">{activeList.name}</div>
+                  <p className="print-date">Lista de Compras — {new Date().toLocaleDateString('pt-BR')}</p>
+                </div>
+
+                <table className="print-table">
+                  <thead>
+                    <tr>
+                      <th className="print-num">#</th>
+                      <th className="print-name">Produto</th>
+                      <th className="print-qty">Qtd</th>
+                      <th className="print-price">Preço Un.</th>
+                      <th className="print-subtotal">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.map((item, i) => (
+                      <tr key={item.id}>
+                        <td className="print-num">{i + 1}</td>
+                        <td className="print-name">{item.name}</td>
+                        <td className="print-qty">{item.quantity}</td>
+                        <td className="print-price">R$ {item.unitPrice.toFixed(2)}</td>
+                        <td className="print-subtotal">R$ {(item.quantity * item.unitPrice).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div className="print-summary">
+                  <div>
+                    <div className="print-meta">{products.length} {products.length === 1 ? 'item' : 'itens'}</div>
+                  </div>
+                  <div>
+                    <div className="print-total-label">Total</div>
+                    <div className="print-total-value">R$ {totalPrice.toFixed(2)}</div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Botão flutuante */}
-            <div style={stylesWeb.fab}>
-              <AntdButton
-                type="primary"
-                size="large"
-                className="fab-btn"
-                onClick={() => setModalVisible(true)}
-                style={stylesWeb.fabButton}
-              >
-                + Adicionar Produto
-              </AntdButton>
-            </div>
+            {activeList && (
+              <div style={stylesWeb.fab}>
+                <AntdButton
+                  type="primary"
+                  size="large"
+                  className="fab-btn"
+                  onClick={() => setModalVisible(true)}
+                  style={stylesWeb.fabButton}
+                >
+                  + Adicionar Produto
+                </AntdButton>
+                {lists.length > 1 && (
+                  <div className="delete-box" style={{ textAlign: 'center', marginTop: 8, border: '1.5px dashed #ff4d4f', borderRadius: 8, padding: '6px 16px', backgroundColor: '#fff' }}>
+                    <AntdPopconfirm
+                      title="Excluir lista"
+                      description={`Excluir "${activeList.name}"?`}
+                      onConfirm={() => handleDeleteList(activeListId)}
+                      okText="Excluir"
+                      cancelText="Cancelar"
+                      okButtonProps={{ danger: true }}
+                      placement="top"
+                    >
+                      <AntdButton
+                        type="text"
+                        size="small"
+                        danger
+                        icon={<span style={{ fontSize: 12 }}>🗑️</span>}
+                        style={{ fontSize: 12, fontWeight: 500 }}
+                      >
+                        Excluir esta lista
+                      </AntdButton>
+                    </AntdPopconfirm>
+                  </div>
+                )}
+              </div>
+            )}
 
-            <AddProductDrawerWeb
-              visible={modalVisible}
-              onClose={() => setModalVisible(false)}
-              productName={productName}
-              setProductName={setProductName}
-              productPrice={productPrice}
-              setProductPrice={setProductPrice}
-              onAdd={handleAddProduct}
-            />
-          </div>
+            {activeList && (
+              <AddProductDrawerWeb
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+                productName={productName}
+                setProductName={setProductName}
+                productPrice={productPrice}
+                setProductPrice={setProductPrice}
+                onAdd={handleAddProduct}
+              />
+            )}
+
+            {/* Modal de Nova Lista (Web) */}
+            <AntdModal
+              title={<span style={{ fontSize: 18, fontWeight: 700 }}>📋 Nova Lista</span>}
+              open={showNewListModal}
+              onCancel={() => { setShowNewListModal(false); setNewListName(''); setSelectedTemplate(null); }}
+              footer={[
+                <AntdButton key="cancel" onClick={() => { setShowNewListModal(false); setNewListName(''); setSelectedTemplate(null); }}>
+                  Cancelar
+                </AntdButton>,
+                <AntdButton key="create" type="primary" onClick={handleCreateList}>
+                  Criar lista
+                </AntdButton>,
+              ]}
+              destroyOnClose
+            >
+              <AntdSpace direction="vertical" style={{ width: '100%' }} size="middle">
+                {/* Seletor de tipo */}
+                <div>
+                  <AntdTypography.Text strong style={{ display: 'block', marginBottom: 8 }}>
+                    1. Selecione o tipo
+                  </AntdTypography.Text>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {LIST_TEMPLATES.map(template => {
+                      const isActive = selectedTemplate?.name === template.name;
+                      return (
+                        <AntdButton
+                          key={template.name}
+                          size="small"
+                          type={isActive ? 'primary' : 'default'}
+                          onClick={() => setSelectedTemplate(isActive ? null : template)}
+                          style={{
+                            padding: '4px 14px',
+                            borderRadius: 20,
+                            fontSize: 13,
+                          }}
+                        >
+                          {template.icon} {template.name}
+                        </AntdButton>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Nome do estabelecimento */}
+                <div>
+                  <AntdTypography.Text strong style={{ display: 'block', marginBottom: 8 }}>
+                    2. Digite o nome do estabelecimento
+                  </AntdTypography.Text>
+                  <AntdInput
+                    className="new-list-name-input"
+                    placeholder="Ex: Supermarket, Nova Vida..."
+                    size="large"
+                    value={newListName}
+                    onChange={(e) => setNewListName(e.target.value)}
+                    onPressEnter={handleCreateList}
+                  />
+                </div>
+
+                {/* Preview do nome final */}
+                {selectedTemplate && newListName.trim() && (
+                  <div style={{
+                    background: colors.successBg,
+                    borderRadius: 8,
+                    padding: '10px 16px',
+                    border: `1px solid ${colors.success}30`,
+                  }}>
+                    <AntdTypography.Text style={{ fontSize: 12, color: colors.textMuted, display: 'block', marginBottom: 2 }}>
+                      Nome da lista:
+                    </AntdTypography.Text>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: colors.text }}>
+                      {selectedTemplate.icon} {selectedTemplate.name} {newListName.trim()}
+                    </span>
+                  </div>
+                )}
+              </AntdSpace>
+            </AntdModal>
         </AntdApp>
       </ConfigProvider>
     );
   }
 
   // ========== VERSÃO NATIVA (iOS/Android) ==========
+
+  // Estado vazio: nenhuma lista criada
+  if (lists.length === 0 && Platform.OS !== 'web') {
+    return (
+      <LinearGradient colors={[colors.gradientStart, colors.gradientEnd]} style={styles.container}>
+        <View style={styles.emptyStateNative}>
+          <Text style={styles.emptyStateIcon}>🛒</Text>
+          <Text style={styles.emptyStateTitle}>Minhas Listas</Text>
+          <Text style={styles.emptyStateDesc}>Você ainda não tem nenhuma lista de compras.</Text>
+          <TouchableOpacity
+            style={styles.createFirstListButton}
+            onPress={() => setShowNewListModal(true)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.createFirstListText}>➕ Criar primeira lista</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Modal transparent visible={showNewListModal} animationType="fade" onRequestClose={() => { setShowNewListModal(false); setNewListName(''); setSelectedTemplate(null); }}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Nova Lista</Text>
+
+              {/* Seletor de tipo */}
+              <Text style={styles.modalStepLabel}>1. Selecione o tipo</Text>
+              <View style={styles.templateChipsRow}>
+                {LIST_TEMPLATES.map(template => {
+                  const isActive = selectedTemplate?.name === template.name;
+                  return (
+                    <TouchableOpacity
+                      key={template.name}
+                      style={[styles.templateChip, isActive && styles.templateChipActive]}
+                      onPress={() => setSelectedTemplate(isActive ? null : template)}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[styles.templateChipText, isActive && styles.templateChipTextActive]}>
+                        {template.icon} {template.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Nome do estabelecimento */}
+              <Text style={[styles.modalStepLabel, { marginTop: spacing.lg }]}>2. Digite o nome</Text>
+              <TextInput
+                placeholder="Ex: Supermarket, Nova Vida..."
+                style={styles.input}
+                value={newListName}
+                onChangeText={setNewListName}
+                placeholderTextColor={colors.textMuted}
+              />
+
+              {/* Preview */}
+              {selectedTemplate && newListName.trim() && (
+                <View style={styles.previewBox}>
+                  <Text style={styles.previewLabel}>Nome da lista:</Text>
+                  <Text style={styles.previewText}>
+                    {selectedTemplate.icon} {selectedTemplate.name} {newListName.trim()}
+                  </Text>
+                </View>
+              )}
+
+              <View style={[styles.modalActions, { marginTop: spacing.md }]}>
+                <TouchableOpacity onPress={() => { setShowNewListModal(false); setNewListName(''); setSelectedTemplate(null); }} style={styles.cancelButton}>
+                  <Text style={styles.cancelButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.saveButton} onPress={handleCreateList} activeOpacity={0.85}>
+                  <Text style={styles.saveButtonText}>Criar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </LinearGradient>
+    );
+  }
+
   return (
     <LinearGradient colors={[colors.gradientStart, colors.gradientEnd]} style={styles.container}>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-        <ProductItemView itemCount={products.length} />
-        {products.length > 0 && (
+        <ProductItemView
+          itemCount={products.length}
+          currentListName={activeList?.name || 'Lista de Compras'}
+          lists={lists}
+          activeListId={activeListId}
+          onSwitchList={handleSwitchList}
+          onCreateList={() => setShowNewListModal(true)}
+          onDeleteList={handleDeleteList}
+        />
+        {activeList && products.length > 0 && (
           <View style={styles.clearRow}>
             <TouchableOpacity
               onPress={() =>
@@ -397,17 +742,45 @@ const App = () => {
             </TouchableOpacity>
           </View>
         )}
-        <ProductList products={products} setProducts={setProducts} />
-        <Text style={styles.totalText}>
-          Total: <Text style={styles.totalValue}>R$ {totalPrice.toFixed(2)}</Text>
-        </Text>
+        {activeList && (
+          <ProductList products={products} setProducts={setProducts} lists={lists} activeListId={activeListId} />
+        )}
+        {activeList && products.length > 0 && (
+          <Text style={styles.totalText}>
+            Total: <Text style={styles.totalValue}>R$ {totalPrice.toFixed(2)}</Text>
+          </Text>
+        )}
       </ScrollView>
 
-      <View style={styles.footerButtonContainer}>
-        <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)} activeOpacity={0.85}>
-          <Text style={styles.addButtonText}>+ Adicionar Produto</Text>
-        </TouchableOpacity>
-      </View>
+      {activeList && (
+        <View style={styles.footerButtonContainer}>
+          <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)} activeOpacity={0.85}>
+            <Text style={styles.addButtonText}>+ Adicionar Produto</Text>
+          </TouchableOpacity>
+          {lists.length > 1 && (
+            <TouchableOpacity
+              onPress={() =>
+                Alert.alert(
+                  'Excluir lista',
+                  `Excluir "${activeList.name}"? Esta ação não pode ser desfeita.`,
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                      text: 'Excluir',
+                      style: 'destructive',
+                      onPress: () => handleDeleteList(activeListId),
+                    },
+                  ]
+                )
+              }
+              style={styles.deleteButtonNative}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.deleteButtonNativeText}>🗑️ Excluir esta lista</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       <Modal transparent visible={modalVisible} animationType="none" onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
@@ -421,6 +794,64 @@ const App = () => {
               </TouchableOpacity>
               <TouchableOpacity style={styles.saveButton} onPress={handleAddProduct} activeOpacity={0.85}>
                 <Text style={styles.saveButtonText}>Adicionar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Nova Lista (Native) */}
+      <Modal transparent visible={showNewListModal} animationType="fade" onRequestClose={() => { setShowNewListModal(false); setNewListName(''); setSelectedTemplate(null); }}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Nova Lista</Text>
+
+            {/* Seletor de tipo */}
+            <Text style={styles.modalStepLabel}>1. Selecione o tipo</Text>
+            <View style={styles.templateChipsRow}>
+              {LIST_TEMPLATES.map(template => {
+                const isActive = selectedTemplate?.name === template.name;
+                return (
+                  <TouchableOpacity
+                    key={template.name}
+                    style={[styles.templateChip, isActive && styles.templateChipActive]}
+                    onPress={() => setSelectedTemplate(isActive ? null : template)}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.templateChipText, isActive && styles.templateChipTextActive]}>
+                      {template.icon} {template.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Nome do estabelecimento */}
+            <Text style={[styles.modalStepLabel, { marginTop: spacing.lg }]}>2. Digite o nome</Text>
+            <TextInput
+              placeholder="Ex: Supermarket, Nova Vida..."
+              style={styles.input}
+              value={newListName}
+              onChangeText={setNewListName}
+              placeholderTextColor={colors.textMuted}
+            />
+
+            {/* Preview */}
+            {selectedTemplate && newListName.trim() && (
+              <View style={styles.previewBox}>
+                <Text style={styles.previewLabel}>Nome da lista:</Text>
+                <Text style={styles.previewText}>
+                  {selectedTemplate.icon} {selectedTemplate.name} {newListName.trim()}
+                </Text>
+              </View>
+            )}
+
+            <View style={[styles.modalActions, { marginTop: spacing.md }]}>
+              <TouchableOpacity onPress={() => { setShowNewListModal(false); setNewListName(''); setSelectedTemplate(null); }} style={styles.cancelButton}>
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveButton} onPress={handleCreateList} activeOpacity={0.85}>
+                <Text style={styles.saveButtonText}>Criar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -461,7 +892,7 @@ const stylesWeb = {
     paddingHorizontal: spacing.md,
   },
   clearButton: {
-    color: 'rgba(255,255,255,0.7)',
+    color: '#fff',
     fontSize: 13,
     letterSpacing: 0.3,
     padding: '4px 8px',
@@ -486,6 +917,18 @@ const stylesWeb = {
     fontWeight: 600,
     borderRadius: 14,
     boxShadow: '0 4px 14px rgba(22,119,255,0.4)',
+  },
+  emptyState: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '80vh',
+    padding: 32,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
   },
 };
 
@@ -609,12 +1052,118 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: '600',
   },
+  // Estado vazio (native)
+  emptyStateNative: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xxl,
+    paddingTop: 80,
+  },
+  emptyStateIcon: {
+    fontSize: 64,
+    marginBottom: spacing.lg,
+  },
+  emptyStateTitle: {
+    fontSize: fontSize.xxxl,
+    fontWeight: fontWeight.bold,
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  emptyStateDesc: {
+    fontSize: fontSize.lg,
+    color: 'rgba(255,255,255,0.75)',
+    textAlign: 'center',
+    marginBottom: spacing.xxxl,
+    lineHeight: 24,
+  },
+  createFirstListButton: {
+    backgroundColor: '#fff',
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.xxxl,
+    borderRadius: radius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow.floating,
+  },
+  createFirstListText: {
+    color: colors.primary,
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+  },
+  deleteButtonNative: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,77,79,0.08)',
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,77,79,0.4)',
+    borderStyle: 'dashed',
+  },
+  deleteButtonNativeText: {
+    color: colors.danger,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+  },
+  templateChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  templateChip: {
+    backgroundColor: colors.subtle,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  templateChipText: {
+    fontSize: fontSize.sm,
+    color: colors.text,
+    fontWeight: fontWeight.medium,
+  },
+  templateChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  templateChipTextActive: {
+    color: '#fff',
+    fontWeight: fontWeight.bold,
+  },
+  modalStepLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  previewBox: {
+    backgroundColor: colors.successBg,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderSecondary,
+    marginBottom: spacing.sm,
+  },
+  previewLabel: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    marginBottom: 2,
+  },
+  previewText: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
 });
 
 // ======== FUNÇÕES UTILITÁRIAS (NÍVEL DO MÓDULO) ========
-function generateListText(items, total) {
+function generateListText(items, total, storeName) {
   const date = new Date().toLocaleDateString('pt-BR');
-  let text = `🛒 Lista de Compras - ${date}\n`;
+  let text = storeName ? `🛒 ${storeName} - ${date}\n` : `🛒 Lista de Compras - ${date}\n`;
   text += `${'='.repeat(35)}\n\n`;
   items.forEach((item, i) => {
     const subtotal = item.quantity * item.unitPrice;
@@ -627,8 +1176,8 @@ function generateListText(items, total) {
   return text;
 }
 
-function exportAsText(products, totalPrice) {
-  const text = generateListText(products, totalPrice);
+function exportAsText(products, totalPrice, storeName) {
+  const text = generateListText(products, totalPrice, storeName);
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -640,9 +1189,9 @@ function exportAsText(products, totalPrice) {
   URL.revokeObjectURL(url);
 }
 
-function exportAsPdf(products, totalPrice) {
+function exportAsPdf(products, totalPrice, storeName) {
+  // A div .print-content já está renderizada com os dados atualizados
   // Abre a janela de impressão do navegador para salvar como PDF
-  // A página renderizada já contém a lista completa com estilos
   window.print();
 }
 

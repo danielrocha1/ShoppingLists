@@ -12,7 +12,7 @@ import {
 import { colors, spacing, radius, fontSize, fontWeight, shadow } from '../theme';
 
 // antd components (apenas web)
-let AntdTable, AntdModal, AntdButton, AntdInputNumber, AntdSpace, AntdTag, AntdTypography;
+let AntdTable, AntdModal, AntdButton, AntdInputNumber, AntdSpace, AntdTag, AntdTypography, AntdTooltip;
 if (Platform.OS === 'web') {
   const antd = require('antd');
   AntdTable = antd.Table;
@@ -22,10 +22,38 @@ if (Platform.OS === 'web') {
   AntdSpace = antd.Space;
   AntdTag = antd.Tag;
   AntdTypography = antd.Typography;
+  AntdTooltip = antd.Tooltip;
+}
+
+// ======== FUNÇÃO DE COMPARAÇÃO DE PREÇOS ========
+function findBestPrice(productName, excludeListId, allLists) {
+  const matches = [];
+  const normalized = productName.toLowerCase().trim();
+
+  allLists.forEach(list => {
+    if (list.id === excludeListId) return;
+    const product = list.products.find(p =>
+      p.name.toLowerCase().trim() === normalized
+    );
+    if (product) {
+      matches.push({
+        listId: list.id,
+        listName: list.name,
+        price: product.unitPrice,
+      });
+    }
+  });
+
+  if (matches.length === 0) return null;
+
+  const best = matches.reduce((min, m) => m.price < min.price ? m : min, matches[0]);
+  const sorted = [...matches].sort((a, b) => a.price - b.price);
+
+  return { best, all: sorted };
 }
 
 // ======== COMPONENTE WEB (antd Table puro, sem RN) ========
-const ProductListWeb = ({ products, setProducts }) => {
+const ProductListWeb = ({ products, setProducts, lists, activeListId }) => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [newUnitPrice, setNewUnitPrice] = useState(0);
 
@@ -125,6 +153,69 @@ const ProductListWeb = ({ products, setProducts }) => {
         </span>
       ),
     },
+    {
+      title: 'Comparar',
+      key: 'compare',
+      width: 110,
+      render: (_, record) => {
+        const comparison = findBestPrice(record.name, activeListId, lists);
+        if (!comparison) return null;
+
+        const isBest = record.unitPrice <= comparison.best.price;
+        const diff = comparison.best.price - record.unitPrice;
+        const isMoreExpensive = record.unitPrice > comparison.best.price;
+
+        const tooltipContent = (
+          <div>
+            <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 13 }}>
+              💰 Preços encontrados
+            </div>
+            {comparison.all.map(c => (
+              <div key={c.listId} style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 16,
+                padding: '2px 0',
+                fontSize: 12,
+                color: c.price === comparison.best.price ? '#52C41A' : 'inherit',
+                fontWeight: c.price === comparison.best.price ? 600 : 400,
+              }}>
+                <span>{c.listName}</span>
+                <span>R$ {c.price.toFixed(2)}</span>
+              </div>
+            ))}
+            {isMoreExpensive && (
+              <div style={{
+                marginTop: 8,
+                paddingTop: 6,
+                borderTop: '1px solid rgba(255,255,255,0.2)',
+                fontSize: 12,
+                color: '#FF4D4F',
+                fontWeight: 600,
+              }}>
+                ⬆️ R$ {Math.abs(diff).toFixed(2)} mais caro que {comparison.best.listName}
+              </div>
+            )}
+          </div>
+        );
+
+        return (
+          <AntdTooltip title={tooltipContent} color="#2d2d2d" overlayStyle={{ maxWidth: 280 }}>
+            <span style={{ cursor: 'pointer' }}>
+              {isBest ? (
+                <AntdTag color="success" style={{ fontSize: 11, margin: 0 }}>
+                  ✅ Melhor
+                </AntdTag>
+              ) : (
+                <AntdTag color="warning" style={{ fontSize: 11, margin: 0 }}>
+                  ⬆️ R$ {Math.abs(diff).toFixed(2)}
+                </AntdTag>
+              )}
+            </span>
+          </AntdTooltip>
+        );
+      },
+    },
   ];
 
   const totalPrice = products.reduce(
@@ -146,7 +237,7 @@ const ProductListWeb = ({ products, setProducts }) => {
         summary={() => (
           <AntdTable.Summary fixed>
             <AntdTable.Summary.Row>
-              <AntdTable.Summary.Cell index={0} colSpan={3}>
+              <AntdTable.Summary.Cell index={0} colSpan={4}>
                 <span style={{ fontWeight: 700, fontSize: 15 }}>Total Geral</span>
               </AntdTable.Summary.Cell>
               <AntdTable.Summary.Cell index={1}>
@@ -198,10 +289,12 @@ const ProductListWeb = ({ products, setProducts }) => {
 };
 
 // ======== COMPONENTE NATIVO (React Native) ========
-const ProductListNative = ({ products, setProducts }) => {
+const ProductListNative = ({ products, setProducts, lists, activeListId }) => {
   const [newUnitPrice, setNewUnitPrice] = useState('');
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [compareModalVisible, setCompareModalVisible] = useState(false);
+  const [compareProduct, setCompareProduct] = useState(null);
   const selectedProduct = products.find(p => p.id === selectedProductId) || null;
 
   const handleIncrement = (productId) => {
@@ -314,6 +407,32 @@ const ProductListNative = ({ products, setProducts }) => {
                   </Text>
                 </TouchableOpacity>
 
+                {(() => {
+                  const comparison = findBestPrice(product.name, activeListId, lists);
+                  if (!comparison) return null;
+                  const isBest = product.unitPrice <= comparison.best.price;
+                  return (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setCompareProduct({ product, comparison });
+                        setCompareModalVisible(true);
+                      }}
+                      style={[
+                        styles.compareBadge,
+                        { backgroundColor: isBest ? colors.successBg : colors.warningBg }
+                      ]}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[
+                        styles.compareBadgeText,
+                        { color: isBest ? colors.success : colors.warning }
+                      ]}>
+                        {isBest ? '✅' : '⬆️'}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })()}
+
                 <Text style={styles.totalCellText}>
                   R$ {(product.quantity * product.unitPrice).toFixed(2)}
                 </Text>
@@ -329,6 +448,71 @@ const ProductListNative = ({ products, setProducts }) => {
           <Text style={styles.totalValue}>R$ {totalPrice.toFixed(2)}</Text>
         </View>
       )}
+
+      {/* Modal de Comparação de Preços */}
+      <RNModal
+        animationType="fade"
+        transparent
+        visible={compareModalVisible}
+        onRequestClose={() => setCompareModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>📊 Comparar Preços</Text>
+            {compareProduct && (
+              <>
+                <Text style={styles.modalSubtitle}>
+                  Produto: <Text style={{ fontWeight: 700 }}>{compareProduct.product.name}</Text>
+                </Text>
+                <View style={styles.compareList}>
+                  {compareProduct.comparison.all.map(c => (
+                    <View key={c.listId} style={styles.compareRow}>
+                      <View style={styles.compareRowLeft}>
+                        <Text style={[
+                          styles.compareRowName,
+                          c.price === compareProduct.comparison.best.price && styles.compareRowBest
+                        ]}>
+                          {c.listName}
+                        </Text>
+                        {c.price === compareProduct.comparison.best.price && (
+                          <Text style={styles.compareRowBestTag}>Melhor</Text>
+                        )}
+                      </View>
+                      <Text style={[
+                        styles.compareRowPrice,
+                        c.price === compareProduct.comparison.best.price && styles.compareRowPriceBest
+                      ]}>
+                        R$ {c.price.toFixed(2)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+                {compareProduct.product.unitPrice > compareProduct.comparison.best.price && (
+                  <View style={styles.compareEconomy}>
+                    <Text style={styles.compareEconomyText}>
+                      ⬆️ R$ {(compareProduct.product.unitPrice - compareProduct.comparison.best.price).toFixed(2)} mais caro que {compareProduct.comparison.best.listName}
+                    </Text>
+                  </View>
+                )}
+                {compareProduct.product.unitPrice <= compareProduct.comparison.best.price && (
+                  <View style={[styles.compareEconomy, { backgroundColor: colors.successBg }]}>
+                    <Text style={[styles.compareEconomyText, { color: colors.success }]}>
+                      ✅ Melhor preço encontrado!
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={() => setCompareModalVisible(false)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.saveButtonText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </RNModal>
 
       <RNModal
         animationType="fade"
@@ -528,6 +712,18 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     minWidth: 50,
   },
+  compareBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 2,
+  },
+  compareBadgeText: {
+    fontSize: 12,
+    fontWeight: fontWeight.bold,
+  },
   totalBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -615,6 +811,63 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.lg,
     fontWeight: fontWeight.medium,
+  },
+  compareList: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  compareRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSecondary,
+  },
+  compareRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  compareRowName: {
+    fontSize: fontSize.md,
+    color: colors.text,
+  },
+  compareRowBest: {
+    fontWeight: fontWeight.bold,
+    color: colors.success,
+  },
+  compareRowBestTag: {
+    fontSize: fontSize.sm,
+    color: colors.success,
+    backgroundColor: colors.successBg,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    fontWeight: fontWeight.semibold,
+    overflow: 'hidden',
+  },
+  compareRowPrice: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+  },
+  compareRowPriceBest: {
+    color: colors.success,
+    fontWeight: fontWeight.bold,
+  },
+  compareEconomy: {
+    backgroundColor: colors.warningBg,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  compareEconomyText: {
+    fontSize: fontSize.md,
+    color: colors.warning,
+    textAlign: 'center',
+    fontWeight: fontWeight.semibold,
   },
 });
 
