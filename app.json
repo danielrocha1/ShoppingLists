@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -31,6 +26,18 @@
       "eas": {
         "projectId": "5815087d-6a0b-4a17-9354-0b04a70b233c"
       }
-    }
+    },
+    "plugins": [
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1677FF",
+          "image": "./assets/splash.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
+        }
+      ]
+    ]
   }
 }
